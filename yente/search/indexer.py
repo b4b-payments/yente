@@ -2,9 +2,9 @@ import asyncio
 import threading
 from normality import WS
 from typing import Any, AsyncGenerator, Dict, List
-from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import BadRequestError
+from opensearchpy import AsyncOpenSearch
+from opensearchpy.helpers import async_bulk, BulkIndexError
+from opensearchpy.exceptions import RequestError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
@@ -68,13 +68,13 @@ async def iter_entity_docs(
 
 
 async def index_entities_rate_limit(
-    es: AsyncElasticsearch, dataset: Dataset, force: bool
+    es: AsyncOpenSearch, dataset: Dataset, force: bool
 ) -> bool:
     async with index_semaphore:
         return await index_entities(es, dataset, force=force)
 
 
-async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
+async def index_entities(es: AsyncOpenSearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     if not dataset.load:
         log.debug("Dataset is going to be loaded", dataset=dataset.name)
@@ -94,7 +94,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
     next_index = f"{dataset_prefix}-{version}"
     exists = await es.indices.exists_alias(name=settings.ENTITY_INDEX, index=next_index)
-    if exists.body and not force:
+    if exists and not force:
         log.info("Index is up to date.", index=next_index)
         return False
 
@@ -103,14 +103,14 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     try:
         schemata = list(model.schemata.values())
         mapping = make_entity_mapping(schemata)
+        body = { "mappings": mapping, "settings": INDEX_SETTINGS }
         await es.indices.create(
             index=next_index,
-            mappings=mapping,
-            settings=INDEX_SETTINGS,
+            body=body,
         )
-    except BadRequestError as exc:
+    except RequestError as exc:
         log.warning(
-            "Cannot create index: %s" % exc.message,
+            "Cannot create index: %s" % exc.error,
             index=next_index,
         )
 
@@ -139,10 +139,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         return False
 
     await es.indices.refresh(index=next_index)
-    res = await es.indices.put_alias(index=next_index, name=settings.ENTITY_INDEX)
-    if res.meta.status != 200:
-        log.error("Failed to alias next index", index=next_index)
-        return False
+    await es.indices.put_alias(index=next_index, name=settings.ENTITY_INDEX)
 
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
     indices: Any = await es.cat.indices(format="json")
@@ -163,7 +160,7 @@ async def update_index(force: bool = False) -> bool:
     """Reindex all datasets if there is a new version of their data contenst available,
     return boolean to indicate if the index was changed for any of them."""
     es_ = await get_es()
-    es = es_.options(request_timeout=300)
+    es = es_
     try:
         catalog = await get_catalog()
         log.info("Index update check")
