@@ -3,7 +3,7 @@ import aiocron  # type: ignore
 from uuid import uuid4
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
-from elasticsearch import ApiError, TransportError
+from opensearchpy import OpenSearchException, TransportError
 from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,18 +77,18 @@ async def request_middleware(
     return response
 
 
-async def api_error_handler(request: Request, exc: ApiError) -> Response:
-    log.exception(f"Search error {exc.status_code}: {exc.message}")
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+async def api_error_handler(request: Request, exc: OpenSearchException) -> Response:
+    log.exception(f"Search error {exc.status_code}: {exc.error}")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.error})
 
 
 async def transport_error_handler(request: Request, exc: TransportError) -> Response:
-    log.exception(f"Transport: {exc.message}")
-    return JSONResponse(status_code=500, content={"detail": exc.message})
+    log.exception(f"Transport: {exc.error}")
+    return JSONResponse(status_code=500, content={"detail": exc.error})
 
 
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
-    ApiError: api_error_handler,
+    OpenSearchException: api_error_handler,
     TransportError: transport_error_handler,
 }
 

@@ -4,17 +4,17 @@ import warnings
 from threading import Lock
 from typing import cast, Any, Dict
 from structlog.contextvars import get_contextvars
-from elasticsearch import AsyncElasticsearch
-from elasticsearch.exceptions import ElasticsearchWarning
-from elasticsearch.exceptions import TransportError, ConnectionError
+from opensearchpy import AsyncOpenSearch
+from opensearchpy.exceptions import OpenSearchWarning
+from opensearchpy.exceptions import TransportError, ConnectionError
 
 from yente import settings
 from yente.logs import get_logger
 
-warnings.filterwarnings("ignore", category=ElasticsearchWarning)
+warnings.filterwarnings("ignore", category=OpenSearchWarning)
 
 log = get_logger(__name__)
-POOL: Dict[int, AsyncElasticsearch] = {}
+POOL: Dict[int, AsyncOpenSearch] = {}
 query_semaphore = asyncio.Semaphore(settings.QUERY_CONCURRENCY)
 index_lock = Lock()
 
@@ -24,7 +24,7 @@ def get_opaque_id() -> str:
     return cast(str, ctx.get("trace_id"))
 
 
-def get_es_connection() -> AsyncElasticsearch:
+def get_es_connection() -> AsyncOpenSearch:
     """Get elasticsearch connection."""
     kwargs: Dict[str, Any] = dict(
         request_timeout=30,
@@ -45,10 +45,10 @@ def get_es_connection() -> AsyncElasticsearch:
         kwargs["basic_auth"] = auth
     if settings.ES_CA_CERT:
         kwargs["ca_certs"] = settings.ES_CA_CERT
-    return AsyncElasticsearch(**kwargs)
+    return AsyncOpenSearch(**kwargs)
 
 
-async def get_es() -> AsyncElasticsearch:
+async def get_es() -> AsyncOpenSearch:
     loop = asyncio.get_running_loop()
     loop_id = hash(loop)
     if loop_id in POOL:
@@ -57,7 +57,7 @@ async def get_es() -> AsyncElasticsearch:
     for retry in range(2, 9):
         try:
             es = get_es_connection()
-            es_ = es.options(request_timeout=5)
+            es_ = es
             await es_.cluster.health(wait_for_status="yellow")
             POOL[loop_id] = es
             return POOL[loop_id]
