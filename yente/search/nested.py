@@ -1,7 +1,7 @@
 import json
 from fastapi import HTTPException
 from typing import Dict, List, Set, Tuple, Union, Optional
-from opensearchpy import OpenSearchException
+from opensearchpy import TransportError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -96,7 +96,7 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                     body=body,
                     size=settings.MAX_RESULTS,
                 )
-        except OpenSearchException as ae:
+        except TransportError as ae:
             log.error(
                 f"Nested search error {ae.status_code}: {ae.error}",
                 index=settings.ENTITY_INDEX,

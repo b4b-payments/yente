@@ -78,13 +78,13 @@ async def request_middleware(
 
 
 async def api_error_handler(request: Request, exc: OpenSearchException) -> Response:
-    log.exception(f"Search error {exc.status_code}: {exc.error}")
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.error})
+    log.exception(f"Search error: {exc}")
+    return JSONResponse(status_code=500, content={"detail": exc})
 
 
 async def transport_error_handler(request: Request, exc: TransportError) -> Response:
-    log.exception(f"Transport: {exc.error}")
-    return JSONResponse(status_code=500, content={"detail": exc.error})
+    log.exception(f"Transport {exc.status_code}: {exc.error}")
+    return JSONResponse(status_code=int(exc.status_code), content={"detail": exc.error})
 
 
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {

@@ -105,13 +105,13 @@ async def search_entities(
                 search_type="dfs_query_then_fetch",
             )
             return response
-    except OpenSearchException as ae:
+    except TransportError as ae:
         log.warning(
             f"API error {ae.status_code}: {ae.args}",
             index=settings.ENTITY_INDEX,
             query_json=json.dumps(query),
         )
-        raise HTTPException(status_code=ae.status_code, detail=ae.error)
+        raise HTTPException(status_code=int(ae.status_code), detail=ae.error)
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:
@@ -144,10 +144,10 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
                 return entity
     except NotFoundError:
         pass
-    except OpenSearchException as ae:
+    except TransportError as ae:
         msg = f"API error {ae.status_code}: {str(ae)}"
         log.warning(msg, index=settings.ENTITY_INDEX)
-        raise HTTPException(status_code=ae.status_code, detail=ae.error)
+        raise HTTPException(status_code=int(ae.status_code), detail=ae.error)
     return None
 
 
@@ -160,9 +160,10 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
     es_ = es
     try:
         async with query_semaphore:
-            body = {}
-            body['query'] = {"bool": {"filter": [filter_]}}
-            body['aggs'] = {facet: {"terms": {"field": "schema", "size": 1000}}}
+            body = {
+                "query": {"bool": {"filter": [filter_]}},
+                "aggs": {facet: {"terms": {"field": "schema", "size": 1000}}}
+            }
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
                 body=body,

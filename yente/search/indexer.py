@@ -147,7 +147,7 @@ async def index_entities(es: AsyncOpenSearch, dataset: Dataset, force: bool) -> 
             name=settings.ENTITY_INDEX,
             index=next_index,
         )
-        if not is_aliased.body:
+        if not is_aliased:
             log.warn("Deleting partial index", index=next_index)
             await es.indices.delete(index=next_index)
         return False
