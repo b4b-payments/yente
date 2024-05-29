@@ -200,11 +200,6 @@ def iter_sorts(sorts: List[str]) -> Generator[Tuple[str, str], None, None]:
         yield sort, order
 
 
-def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:
+def parse_sorts(sorts: List[str], default: Optional[List[str]] = ["_score:desc"]) -> str:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
-    objs: List[Any] = []
-    for sort, order in iter_sorts(sorts):
-        objs.append({sort: {"order": order, "missing": "_last"}})
-    if default is not None:
-        objs.append(default)
-    return objs
+    return ",".join(sorts)

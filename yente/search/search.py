@@ -85,7 +85,7 @@ async def search_entities(
     limit: int = 5,
     offset: int = 0,
     aggregations: Optional[Dict[str, Any]] = None,
-    sort: List[Any] = [],
+    sort: Optional[str] = None,
 ) -> Any:
     es = await get_es()
     es_ = es
