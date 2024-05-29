@@ -157,7 +157,7 @@ async def index_entities(es: AsyncOpenSearch, dataset: Dataset, force: bool) -> 
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
 
     res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
-    for aliased_index in res.body.keys():
+    for aliased_index in res.keys():
         if aliased_index == next_index:
             continue
         if aliased_index.startswith(dataset_prefix):

@@ -9,7 +9,7 @@ log = get_logger(__name__)
 async def sync_dataset_versions(catalog: Catalog) -> None:
     es = await get_es()
     res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
-    for aliased_index in res.body.keys():
+    for aliased_index in res.keys():
         aliased_end: str = aliased_index[len(settings.ENTITY_INDEX) + 1 :]
         dataset_name, index_version = aliased_end.split("-", 1)
         version = index_version[len(settings.INDEX_VERSION) :]
