@@ -42,6 +42,7 @@ setup(
         "fingerprints==1.2.3",
         "pantomime==0.6.1",
         "cryptography==42.0.7",
+        "numpy<2.0",
     ],
     extras_require={
         "dev": [
