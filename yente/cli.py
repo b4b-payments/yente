@@ -32,6 +32,7 @@ def serve() -> None:
             # debug=settings.DEBUG,
             log_level=settings.LOG_LEVEL,
             server_header=False,
+            timeout_keep_alive=settings.TIMEOUT_KEEP_ALIVE,
         ),
     )
     configure_logging()
