@@ -1,6 +1,6 @@
 services:
   index:
-    image: opensearchproject/opensearch:2.15.0
+    image: opensearchproject/opensearch:2.19.0
     expose:
       - "9200"
     ports:
